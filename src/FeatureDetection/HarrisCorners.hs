@@ -23,7 +23,7 @@ cornerResponseZ !k !dx !dy = computeP $ R.zipWith getM dx dy
                         x2 = square x
                         y2 = square y
                         xy = x * y
-                     in (det x2 y2 xy)- k * (square $ trace x2 y2)
+                     in (det x2 y2 xy) - (0.0 * (square $ trace x2 y2))
         {-# INLINE getM #-}
 
         det :: Float -> Float -> Float -> Float
