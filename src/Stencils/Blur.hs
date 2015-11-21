@@ -41,7 +41,7 @@ blur input = do blurX <- blurSepX input
 -- | A box blur.
 boxBlur :: Array U DIM2 Float -> IO (Array U DIM2 Float)
 boxBlur arr
-  = computeP $ Data.Array.Repa.map (/25)
+  = computeP $ smap (/25)
   $ forStencil2 BoundClamp arr
     [stencil2|  1 1 1 1 1
                 1 1 1 1 1
