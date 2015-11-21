@@ -5,6 +5,7 @@ module Stencils.Blur
     blurSepY
   , blurSepX
   , blur
+  , boxBlur
 ) where
 
 import Data.Array.Repa
@@ -36,3 +37,15 @@ blurSepX arr
 blur :: Array U DIM2 Float -> IO (Array U DIM2 Float)
 blur input = do blurX <- blurSepX input
                 blurSepY blurX
+
+-- | A box blur.
+boxBlur :: Array U DIM2 Float -> IO (Array U DIM2 Float)
+boxBlur arr
+  = computeP $ Data.Array.Repa.map (/25)
+  $ forStencil2 BoundClamp arr
+    [stencil2|  1 1 1 1 1
+                1 1 1 1 1
+                1 1 1 1 1
+                1 1 1 1 1
+                1 1 1 1 1|]
+{-# NOINLINE boxBlur #-}

@@ -14,9 +14,40 @@ import Prelude hiding (compare)
 import Utility.Time
 import Utility.ImageRep
 import Utility.Overlay
+
 import Stencils.Blur
 import Stencils.Gradient
 import FeatureDetection.HarrisCorners
+
+-- Display all elements of list with their index
+displayList :: (Ord a, Unbox a) => Image a -> a -> [(a,Int)]
+displayList img k = filter ((<) k . fst) $ Prelude.zip (toList img) [1..]
+
+displayListShape :: (Ord a, Unbox a) => Image a -> [(a,Int)] -> [(a,DIM2)]
+displayListShape img vals = Prelude.map (\(x,ix) -> (x, fromIndex (extent img) ix)) vals
+
+displayMagList :: (Ord a, Unbox a, Num a) => Image a -> a -> [(a,Int)]
+displayMagList img k = filter ((<) k . abs . fst) $ Prelude.zip (toList img) [1..]
+
+toIndexList :: (Ord a, Unbox a, Num a) => Image a -> [(a,Int)]
+toIndexList img = Prelude.zip (toList img) [1..]
+
+toShapeList :: (Ord a, Unbox a, Num a) => Image a -> [(a,DIM2)]
+toShapeList img = Prelude.map (\(x,ix) -> (x, fromIndex (extent img) ix)) $ toIndexList img
+
+toOnlyPos :: (Ord a, Unbox a, Num a) => [(a,b)] -> [(a,b)]
+toOnlyPos = Prelude.map (\(x,y) -> (max x 0, y))
+
+printShapeList :: (Show a) => [(a,DIM2)] -> IO ()
+printShapeList [x] = putStrLn $ show $ fst x
+printShapeList list@((x,(Z :. xj :. _)):(_,(Z :. yj :. _)):_) = do
+  if (xj == yj) then do
+                      putStr $ (show x) Prelude.++ " "
+                      printShapeList $ tail list
+                else do
+                      putStrLn $ show x
+                      printShapeList $ tail list
+
 
 main :: IO ()
 main = do
@@ -37,31 +68,19 @@ process loops arrInput
       arrBlur    <- timeStage loops "blur" $ blur arrGrey
       arrGradX   <- timeStage loops "gradX" $ gradientX arrBlur
       arrGradY  <- timeStage loops "gradY" $ gradientY arrBlur
-
-      cornerImage <- timeStage loops "Harris" $ cornerResponse 0.04 arrGradX arrGradY
-      cornerImageZ <- timeStage loops "HarrisZ" $ cornerResponseZ 0.04 arrGradX arrGradY
+      arrGradXY <- timeStage loops "gradXY" $ gradientY arrGradX
+      cornerImage <- timeStage loops "Harris" $ cornerResponse 0.15 arrGradX arrGradY arrGradXY
       corners <- timeStage loops "Corner Selection" $ selectCorners 0 cornerImage
-      cornersZ <- timeStage loops "Corner Selection Z" $ selectCorners 0 cornerImageZ
-      --putStrLn "Image values"
-      --putStrLn $ show $ take 1000 $ toList arrGrey
-      --putStrLn "Blurred"
-      --putStrLn $ show $ take 1000 $ toList arrBlur
-      --putStrLn "GradX"
-      --putStrLn $ show $ take 1000 $ toList arrGradX
-      --putStrLn "GradY"
-      --putStrLn $ show $ take 1000 $ toList arrGradY
-      --putStrLn "Corner"
-      --putStrLn $ show $ take 1000 $ toList cornerImage
-      --putStrLn "CornerZ"
-      --putStrLn $ show $ take 1000 $ toList cornerImageZ
-      putStrLn $ show $ valuePoint cornersZ cornerImageZ
-      overlay <- timeStage loops "With corners" $ overlayPoints 128 arrGrey cornersZ
+      --putStrLn $ show $ displayList arrGradX 0
+      --putStrLn $ show $ displayList cornerImage 0
+      --putStrLn $ show $ toShapeList arrGradX
+      --printShapeList $ toShapeList arrGradY
+      --printShapeList $ toOnlyPos $ toShapeList cornerImage
+      overlay <- timeStage loops "With corners" $ overlayPoints 128 arrGrey corners
 
-
-      --putStrLn $ show $ toList cornersZ
-      --arrMagOrient <- timeStage loops "magOrident" $ gradientMagOrient 50 arrGradX arrGradY
+      --putStrLn $ show $ toList corners
+     --arrMagOrient <- timeStage loops "magOrident" $ gradientMagOrient 50 arrGradX arrGradY
       --arrMag <- timeStage loops "just mag" $ gradMagToImage arrMagOrient
-      --arrOutput   <- timeStage loops "toOutput" $ toOutput overlay
       return overlay
 
 gradMagToImage :: Image (Float, Word8) -> IO (Image Float)
